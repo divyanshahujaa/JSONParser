@@ -1,8 +1,9 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <iostream>
 
-enum TokenType{
+/*enum TokenType{
     OPENBRACE,
     CLOSEDBRACE,
     COLON,
@@ -84,8 +85,85 @@ JSONObject parseTokenList(std::vector<JSONToken> tokenList){
     }
     return parsedJson;
 
+};*/
+
+class JSONObject{
+public:
+    std::vector<std::pair<std::string,std::string>> objl;
 };
-int main(){
-    JSONObject x;
+
+
+/* 
+    Holds a list of key-value pairs in sequence
+    key is a string
+    value can be either of:
+        string
+        int
+        float
+        JSONObject
+*/
+/*task 1 is to parse single key value(trings only) pair*/
+int main(int argc, char* argv[]){
+    JSONObject x; //the goal is to build the json object.
+    if(argc!=2){
+        std::cout<<"Incorrect Usage\n";
+    }
+
+    FILE *pFile;
+    //char buffer[100];
+    char currChar;
+    pFile = fopen(argv[1], "r");
+    if(pFile == nullptr){
+        perror("Error opening file");
+        return 1;
+    }
+    else{
+        std::string key;
+        std::string value;
+        bool isReadingKey = true;
+        while((currChar = fgetc(pFile)) != EOF){
+            switch (currChar)
+            {
+            case '{':
+                if(!isReadingKey){
+                    perror("Invalid Format");
+                    return 1;
+                }
+                break;
+            case '}':
+                if(isReadingKey){
+                    perror("Invalid Format");
+                    return 1;
+                }
+                break;
+            case ':':
+                if(!isReadingKey){
+                    perror("Invalid Format");
+                    return 1;
+                }
+                isReadingKey = false;
+                break;
+            default:
+                if(isReadingKey){
+                    key = key + currChar;
+                }
+                else{
+                    value = value + currChar;
+                }
+                break;
+            }
+            std::cout<<currChar;
+        }
+        std::cout<<"\n";
+        if(isReadingKey){
+            perror("Invalid Format");
+            return 1;
+        }
+        x.objl.push_back({key, value});
+        std::cout<<key<<" "<<value<<std::endl;
+        fclose(pFile);
+    }
+
+
     return 0;
 }
