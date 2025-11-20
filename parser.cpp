@@ -102,7 +102,8 @@ public:
         float
         JSONObject
 */
-/*task 1 is to parse single key value(trings only) pair*/
+/*task 1 is to parse single key value(strings only) pair*/
+/*task 2 is to parse multiple key value(strings only) pairs*/
 int main(int argc, char* argv[]){
     JSONObject x; //the goal is to build the json object.
     if(argc!=2){
@@ -142,6 +143,16 @@ int main(int argc, char* argv[]){
                     return 1;
                 }
                 isReadingKey = false;
+                break;
+            case ',':
+                if(isReadingKey){
+                    perror("Invalid Format");
+                    return 1;
+                }
+                isReadingKey = true;
+                x.objl.push_back({key, value});
+                key = "";
+                value = "";
                 break;
             default:
                 if(isReadingKey){
