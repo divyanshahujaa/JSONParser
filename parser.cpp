@@ -2,6 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <variant>
 
 /*enum TokenType{
     OPENBRACE,
@@ -106,14 +107,16 @@ enum TokenType{
     UNKNOWN
 };
 
-union TokenVal
-{
-    std::string str;
-    int integer;
-    float fl;
-    bool trufal;
+// union TokenVal
+// {
+//     std::string str;
+//     int integer;
+//     float fl;
+//     bool trufal;
 
-};
+// };
+
+typedef std::variant<std::string, int, float, bool> TokenVal;
 
 class Token
 {
@@ -140,7 +143,7 @@ Token getToken(FILE* pFile){
                 return t;
             }
             else if(currTokenType==STRING){
-                t.val.str += currChar;
+                t.val = std::get<std::string>(t.val) +currChar;
             }
             else{
                 perror("INVALID TOKEN");
@@ -154,7 +157,7 @@ Token getToken(FILE* pFile){
                 return t;
             }
             else if(currTokenType==STRING){
-                t.val.str += currChar;
+                t.val = std::get<std::string>(t.val) +currChar;
             }
             else{
                 perror("INVALID TOKEN");
@@ -168,7 +171,7 @@ Token getToken(FILE* pFile){
             return t;
             }
             else if(currTokenType==STRING){
-                t.val.str += currChar;
+                t.val = std::get<std::string>(t.val) +currChar;
             }
             else{
                 perror("INVALID TOKEN");
@@ -183,7 +186,7 @@ Token getToken(FILE* pFile){
                 //ungetc()
             }
             else if(currTokenType==STRING){
-                t.val.str += currChar;
+                t.val = std::get<std::string>(t.val) +currChar;
             }
             else{
                 ungetc(currChar, pFile);
@@ -197,7 +200,7 @@ Token getToken(FILE* pFile){
             }
             else{
                 if(currTokenType == STRING){
-                    t.val.str += currChar;
+                    t.val = std::get<std::string>(t.val) +currChar;
                 }
                 else{
                     perror("INVALID TOKEN");
@@ -219,12 +222,12 @@ Token getToken(FILE* pFile){
         
         case '.':
             if(currTokenType == STRING){
-                t.val.str += currChar;
+                t.val = std::get<std::string>(t.val) +currChar;
             }
             else{
                 currTokenType = FLOAT;
                 t.type = FLOAT;
-                isPreDecimal = false
+                isPreDecimal = false;
             }
         
         default:
@@ -234,27 +237,30 @@ Token getToken(FILE* pFile){
                     if(isdigit(currChar)){
                         currTokenType = INTEGER;
                         int x = currChar - '0';
-                        t.val.integer = t.val.integer*10 + x;
+                        // t.val.integer = t.val.integer*10 + x;
+                        t.val = std::get<int>(t.val)*10 +x;
                     }
                 }
                 else{
                     if(isPreDecimal){
                         int x = currChar - '0';
-                        t.val.integer = t.val.integer*10 + x;
+                        // t.val.integer = t.val.integer*10 + x;
+                        t.val = std::get<int>(t.val)*10 +x;
                     }
                     else{
                         float x = currChar - '0';
-                        t.val.fl = t.val.fl + x/10;
+                        // t.val.fl = t.val.fl + x/10;
+                        t.val = std::get<float>(t.val) +x/10;
                     }
                 }
             }
             else{
-                t.val.str += currChar;
+                t.val = std::get<std::string>(t.val) +currChar;
             }
             break;
         }
     }
-    
+    return t;
 }
 
 void printToken(Token t){
