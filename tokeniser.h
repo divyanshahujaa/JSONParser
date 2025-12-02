@@ -27,4 +27,4 @@ public:
 
 Token getToken(FILE* pFile);
 
-void parseTokens(FILE* pFile);
+void runTokeniser(FILE* pFile, std::vector<Token>& tokens);

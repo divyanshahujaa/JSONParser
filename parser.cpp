@@ -81,11 +81,130 @@ JSONObject parseTokenList(std::vector<JSONToken> tokenList){
     return parsedJson;
 
 };*/
+enum class JSONValueType{
+    STRING,
+    INT,
+    FLOAT,
+    BOOL,
+    NULLOBJ,
+    JSON,
+    UNKNOWN
+};
+
+class JSONValue{
+public:
+    std::variant<std::string, int, float, bool, std::nullptr_t, std::map<std::string, JSONValue>> _value;
+    JSONValueType type_id;
+
+    JSONValue(){
+        this->type_id = JSONValueType::UNKNOWN;
+    }
+
+    JSONValue(JSONValue &x) = delete;
+    
+    JSONValue(JSONValue &&x): _value(std::move(_value)), type_id(x.type_id){
+        x.type_id = JSONValueType::UNKNOWN;
+    }
+    JSONValue& operator=(JSONValue &&x){
+        _value = std::move(x._value);
+        type_id = x.type_id;
+        return *this;
+    }
+
+
+};
 
 class JSONObject{
 public:
-    std::vector<std::pair<std::string,std::string>> objl;
+    std::map<std::string, JSONValue> objl;
 };
+
+void runParser(JSONObject& x, std::vector<Token> tokens){
+    bool isFirstOpenBrace = true;
+    bool isReadingKey = true;
+    std::string currKey = "";
+    for(auto token : tokens){
+        switch (token.type)
+        {
+        case OPENBRACE:
+            {if(isFirstOpenBrace){
+                isFirstOpenBrace = false;
+            }
+            else{
+                JSONValue t;
+                t.type_id = JSONValueType::JSON;
+                t._value = std::map<std::string, JSONValue>();
+                x.objl[currKey] = std::move(t);
+            }}
+            break;
+        
+        case CLOSEDBRACE:
+            
+            break;
+        
+        case COLON:
+            isReadingKey = false;
+            break;
+        
+        case STRING:
+            {if(isReadingKey){
+                currKey = std::get<std::string>(token.val);
+            }
+            else{
+                JSONValue t;
+                t.type_id = JSONValueType::STRING;
+                t._value = std::get<std::string>(token.val);
+                x.objl[currKey] = std::move(t);
+            }}
+            break;
+        
+        case INTEGER:
+            {JSONValue t;
+            t.type_id = JSONValueType::INT;
+            t._value = std::get<int>(token.val);
+            x.objl[currKey] = std::move(t);}
+            break;
+
+        case FLOAT:
+            {JSONValue t;
+            t.type_id = JSONValueType::FLOAT;
+            t._value = std::get<float>(token.val);
+            x.objl[currKey] = std::move(t);}
+            break;
+
+        case BOOL:
+            {JSONValue t;
+            t.type_id = JSONValueType::STRING;
+            t._value = std::get<std::string>(token.val);
+            x.objl[currKey] = std::move(t);}
+            break;
+
+        case NULLOBJ:
+            {JSONValue t;
+            t.type_id = JSONValueType::NULLOBJ;
+            t._value = std::nullptr_t();
+            x.objl[currKey] = std::move(t);}
+            break;
+
+        case DELIMITER:
+            
+            break;
+
+        case INVALID:
+            /* code */
+            break;
+
+        case UNKNOWN:
+            /* code */
+            break;
+
+        default:
+            break;
+        }
+    }
+    return;
+}
+
 
 /* 
     Holds a list of key-value pairs in sequence
@@ -102,6 +221,7 @@ public:
 /*task 4: parse the tokens to get the json structure and write it to the JSON object*/
 int main(int argc, char* argv[]){
     JSONObject x; //the goal is to build the json object.
+    std::cout<<x.objl.size()<<std::endl;
     if(argc!=2){
         std::cout<<"Incorrect Usage\n";
     }
@@ -114,72 +234,76 @@ int main(int argc, char* argv[]){
         perror("Error opening file");
         return 1;
     }
-    else{
-        parseTokens(pFile);
-        /*std::string key;
-        std::string value;
-        bool isReadingKey = true;
-        bool isReadingString = false;
-        bool isIgnoreSpaces = false;
-        while((currChar = fgetc(pFile)) != EOF){
-            switch (currChar)
-            {
-            case '{':
-                if(!isReadingKey){
-                    perror("Invalid Format");
-                    return 1;
-                }
-                isIgnoreSpaces = true;
-                break;
-            case '}':
-                if(isReadingKey){
-                    perror("Invalid Format");
-                    return 1;
-                }
-                break;
-            case '"':
-                if(!isReadingKey)
-                    isReadingString = !isReadingString;
-                break;
-            case ' ':
-                break;
-            case ':':
-                if(!isReadingKey){
-                    perror("Invalid Format");
-                    return 1;
-                }
-                isReadingKey = false;
-                break;
-            case ',':
-                if(isReadingKey){
-                    perror("Invalid Format");
-                    return 1;
-                }
-                isReadingKey = true;
-                x.objl.push_back({key, value});
-                key = "";
-                value = "";
-                break;
-            default:
-                if(isReadingKey){
-                    key = key + currChar;
-                }
-                else{
-                    value = value + currChar;
-                }
-                break;
+
+    std::vector<Token> tokens;
+    runTokeniser(pFile, tokens);
+    runParser(x, tokens);
+
+
+    /*std::string key;
+    std::string value;
+    bool isReadingKey = true;
+    bool isReadingString = false;
+    bool isIgnoreSpaces = false;
+    while((currChar = fgetc(pFile)) != EOF){
+        switch (currChar)
+        {
+        case '{':
+            if(!isReadingKey){
+                perror("Invalid Format");
+                return 1;
             }
-            std::cout<<currChar;
+            isIgnoreSpaces = true;
+            break;
+        case '}':
+            if(isReadingKey){
+                perror("Invalid Format");
+                return 1;
+            }
+            break;
+        case '"':
+            if(!isReadingKey)
+                isReadingString = !isReadingString;
+            break;
+        case ' ':
+            break;
+        case ':':
+            if(!isReadingKey){
+                perror("Invalid Format");
+                return 1;
+            }
+            isReadingKey = false;
+            break;
+        case ',':
+            if(isReadingKey){
+                perror("Invalid Format");
+                return 1;
+            }
+            isReadingKey = true;
+            x.objl.push_back({key, value});
+            key = "";
+            value = "";
+            break;
+        default:
+            if(isReadingKey){
+                key = key + currChar;
+            }
+            else{
+                value = value + currChar;
+            }
+            break;
         }
-        std::cout<<"\n";
-        if(isReadingKey){
-            perror("Invalid Format");
-            return 1;
-        }
-        x.objl.push_back({key, value});
-        std::cout<<key<<" "<<value<<std::endl;*/
-        fclose(pFile);
+        std::cout<<currChar;
     }
+    std::cout<<"\n";
+    if(isReadingKey){
+        perror("Invalid Format");
+        return 1;
+    }
+    x.objl.push_back({key, value});
+    std::cout<<key<<" "<<value<<std::endl;*/
+    fclose(pFile);
+    
 
 
     return 0;

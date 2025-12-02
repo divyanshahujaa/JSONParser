@@ -251,8 +251,8 @@ void printToken(Token t){
     std::cout<<translator[t.type]<<std::endl;
 }
 
-void parseTokens(FILE* pFile){
-    std::vector<Token> tokens;
+void runTokeniser(FILE* pFile, std::vector<Token>& tokens){
+    
     char currChar;
     while((currChar = fgetc(pFile))!=EOF){
         ungetc(currChar, pFile);
