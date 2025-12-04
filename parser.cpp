@@ -5,82 +5,7 @@
 #include <variant>
 #include <map>
 #include "tokeniser.h"
-/*
-class JSONToken{
-public:
-    std::string data;
-    TokenType type;
 
-    JSONToken(TokenType type){
-        this->type = type;
-    }
-
-    JSONToken(std::string data, TokenType type){
-        this->data = data;
-        this->type = type;
-    }
-};
-
-
-enum TokeniserState{
-    START,
-    PARSINGKEY,
-    PARSINGVALUE,
-    ParsingKeyInQuotes,
-    ParsingValInQuotes,
-    OUTQUOTES
-};
-
-enum JSONValueType{
-    JSONOBJECT,
-    JSONVALUE
-};
-
-class JSONObject{
-public:
-    JSONValueType type;
-    std::unordered_map<std::string, JSONObject> obj;
-};
-
-
-class JSONObjectValue : public JSONObject{
-public:
-
-    std::string data;
-    JSONObjectValue(std::string s){
-        this->data = s;
-    }
-};
-enum JSONParserState{
-    PARSESTART, PARSEKEY, PARSEVALUE
-};
-JSONObject parseTokenList(std::vector<JSONToken> tokenList){
-    JSONObject parsedJson;
-    JSONParserState state = PARSESTART;
-    std::string key = "";
-    JSONObject value;
-    for(auto x : tokenList){
-        switch (x.type)
-        {
-        case OPENBRACE:
-            state = PARSEKEY;
-            break;
-        case CLOSEDBRACE:
-            parsedJson.obj[key] = value;
-            break;
-        case KEY:
-            key = x.data;
-            break;
-        case VALUE:
-            value = JSONObjectValue(x.data);
-            break;
-        default:
-            break;
-        }
-    }
-    return parsedJson;
-
-};*/
 enum class JSONValueType{
     STRING,
     INT,
@@ -105,6 +30,7 @@ public:
     JSONValue(JSONValue &&x): _value(std::move(_value)), type_id(x.type_id){
         x.type_id = JSONValueType::UNKNOWN;
     }
+        
     JSONValue& operator=(JSONValue &&x){
         _value = std::move(x._value);
         type_id = x.type_id;
@@ -119,11 +45,12 @@ public:
     std::map<std::string, JSONValue> objl;
 };
 
-void runParser(JSONObject& x, std::vector<Token> tokens){
+void runParser(JSONObject& x, std::vector<Token> tokens, int idx){
     bool isFirstOpenBrace = true;
     bool isReadingKey = true;
     std::string currKey = "";
-    for(auto token : tokens){
+    for(int i=idx; i<tokens.size();i++){
+        auto token = tokens[i];
         switch (token.type)
         {
         case OPENBRACE:
@@ -133,13 +60,16 @@ void runParser(JSONObject& x, std::vector<Token> tokens){
             else{
                 JSONValue t;
                 t.type_id = JSONValueType::JSON;
-                t._value = std::map<std::string, JSONValue>();
+                // t._value = std::map<std::string, JSONValue>();
+                JSONObject k;
+                runParser(k, tokens, i);
+                t._value = std::move(k.objl);
                 x.objl[currKey] = std::move(t);
             }}
             break;
         
         case CLOSEDBRACE:
-            
+            return;
             break;
         
         case COLON:
@@ -159,6 +89,10 @@ void runParser(JSONObject& x, std::vector<Token> tokens){
             break;
         
         case INTEGER:
+            if(isReadingKey){
+                std::cout<<"error parsing";
+                return;
+            }
             {JSONValue t;
             t.type_id = JSONValueType::INT;
             t._value = std::get<int>(token.val);
@@ -166,6 +100,10 @@ void runParser(JSONObject& x, std::vector<Token> tokens){
             break;
 
         case FLOAT:
+            if(isReadingKey){
+                std::cout<<"error parsing";
+                return;
+            }
             {JSONValue t;
             t.type_id = JSONValueType::FLOAT;
             t._value = std::get<float>(token.val);
@@ -173,6 +111,10 @@ void runParser(JSONObject& x, std::vector<Token> tokens){
             break;
 
         case BOOL:
+            if(isReadingKey){
+                std::cout<<"error parsing";
+                return;
+            }
             {JSONValue t;
             t.type_id = JSONValueType::STRING;
             t._value = std::get<std::string>(token.val);
@@ -180,6 +122,10 @@ void runParser(JSONObject& x, std::vector<Token> tokens){
             break;
 
         case NULLOBJ:
+            if(isReadingKey){
+                std::cout<<"error parsing";
+                return;
+            }
             {JSONValue t;
             t.type_id = JSONValueType::NULLOBJ;
             t._value = std::nullptr_t();
@@ -187,7 +133,11 @@ void runParser(JSONObject& x, std::vector<Token> tokens){
             break;
 
         case DELIMITER:
-            
+            if(isReadingKey){
+                std::cout<<"error parsing";
+                return;
+            }
+            isReadingKey = true;
             break;
 
         case INVALID:
@@ -237,71 +187,9 @@ int main(int argc, char* argv[]){
 
     std::vector<Token> tokens;
     runTokeniser(pFile, tokens);
-    runParser(x, tokens);
+    runParser(x, tokens, 0);
+    std::cout<<x.objl.size()<<std::endl;
 
-
-    /*std::string key;
-    std::string value;
-    bool isReadingKey = true;
-    bool isReadingString = false;
-    bool isIgnoreSpaces = false;
-    while((currChar = fgetc(pFile)) != EOF){
-        switch (currChar)
-        {
-        case '{':
-            if(!isReadingKey){
-                perror("Invalid Format");
-                return 1;
-            }
-            isIgnoreSpaces = true;
-            break;
-        case '}':
-            if(isReadingKey){
-                perror("Invalid Format");
-                return 1;
-            }
-            break;
-        case '"':
-            if(!isReadingKey)
-                isReadingString = !isReadingString;
-            break;
-        case ' ':
-            break;
-        case ':':
-            if(!isReadingKey){
-                perror("Invalid Format");
-                return 1;
-            }
-            isReadingKey = false;
-            break;
-        case ',':
-            if(isReadingKey){
-                perror("Invalid Format");
-                return 1;
-            }
-            isReadingKey = true;
-            x.objl.push_back({key, value});
-            key = "";
-            value = "";
-            break;
-        default:
-            if(isReadingKey){
-                key = key + currChar;
-            }
-            else{
-                value = value + currChar;
-            }
-            break;
-        }
-        std::cout<<currChar;
-    }
-    std::cout<<"\n";
-    if(isReadingKey){
-        perror("Invalid Format");
-        return 1;
-    }
-    x.objl.push_back({key, value});
-    std::cout<<key<<" "<<value<<std::endl;*/
     fclose(pFile);
     
 
